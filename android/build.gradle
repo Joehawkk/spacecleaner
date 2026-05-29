@@ -1,0 +1,72 @@
+apply plugin: 'com.android.application'
+
+configurations { natives }
+
+android {
+    compileSdk androidCompileSdkVersion
+    namespace 'com.spacecleaner'
+
+    defaultConfig {
+        applicationId   'com.spacecleaner'
+        minSdk    androidMinSdkVersion
+        targetSdk androidTargetSdkVersion
+        versionCode 1
+        versionName '1.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile  'src/main/AndroidManifest.xml'
+            java.srcDirs      = ['src/main/java']
+            res.srcDirs       = ['src/main/res']
+            assets.srcDirs    = ['assets']
+        }
+    }
+}
+
+task copyAndroidNatives {
+    doFirst {
+        def abis = ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64']
+        abis.each { file("src/main/jniLibs/$it").mkdirs() }
+
+        def abiMap = [
+            'natives-armeabi-v7a': 'armeabi-v7a',
+            'natives-arm64-v8a'  : 'arm64-v8a',
+            'natives-x86'        : 'x86',
+            'natives-x86_64'     : 'x86_64'
+        ]
+        configurations.natives.copy().each { jar ->
+            abiMap.each { suffix, dir ->
+                if (jar.name.endsWith("${suffix}.jar")) {
+                    copy { from zipTree(jar); into "src/main/jniLibs/$dir"; include '*.so' }
+                }
+            }
+        }
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name.contains('package') || task.name.contains('assemble')) {
+        task.dependsOn copyAndroidNatives
+    }
+}
+
+dependencies {
+    implementation project(':core')
+    implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
+
+    natives "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-armeabi-v7a"
+    natives "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-arm64-v8a"
+    natives "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-x86"
+    natives "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-x86_64"
+}

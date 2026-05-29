@@ -1,0 +1,2 @@
+rootProject.name = "SpaceCleaner"
+include 'core', 'android'
